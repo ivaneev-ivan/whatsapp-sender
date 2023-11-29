@@ -1,0 +1,16 @@
+[tool.poetry]
+name = "whatsapp-sender"
+version = "0.1.0"
+description = ""
+authors = ["ivan <ivaneev.ivane@gmail.com>"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.11"
+uiautomator2 = "^2.16.25"
+weditor = "^0.7.2"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
