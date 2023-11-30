@@ -74,7 +74,7 @@ def send_char_typing_part(message: MessagePartWithCommand, message_box: UiObject
         if text_before == "Сообщение":
             text_before = ""
         words = message.text.split()
-        for i in range(len(words)):
+        for i in range(len(words)+1):
             message_box.send_keys(text_before + " ".join(words[:i]))
     if message.command == CommandTypes.SEND_MESSAGE:
         d(resourceId="com.whatsapp.w4b:id/conversation_entry_action_button").click()
