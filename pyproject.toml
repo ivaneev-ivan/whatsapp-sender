@@ -6,7 +6,7 @@ authors = ["ivan <ivaneev.ivane@gmail.com>"]
 readme = "README.md"
 
 [tool.poetry.dependencies]
-python = "^3.11"
+python = ">=3.10"
 uiautomator2 = "^2.16.25"
 weditor = "^0.7.2"
 pure-python-adb = "^0.3.0.dev0"
