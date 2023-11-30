@@ -73,10 +73,11 @@ def send_char_typing_part(message: MessagePartWithCommand, message_box: UiObject
         text_before = message_box.get_text()
         if text_before == "Сообщение":
             text_before = ""
-        for i in range(len(message.text)):
-            message_box.send_keys(text_before + message.text[:i])
+        words = message.text.split()
+        for i in range(len(words)):
+            message_box.send_keys(text_before + " ".join(words[:i]))
     if message.command == CommandTypes.SEND_MESSAGE:
-        d(resourceId="com.whatsapp:id/conversation_entry_action_button").click()
+        d(resourceId="com.whatsapp.w4b:id/conversation_entry_action_button").click()
     elif message.command == CommandTypes.NEW_LINE:
         d.press('enter')
 
@@ -84,12 +85,13 @@ def send_char_typing_part(message: MessagePartWithCommand, message_box: UiObject
 def send_message_to_phone(phone: str, name: str, message: str, device: DeviceADB) -> bool:
     d = get_control_to_device(device)
     d.open_url(f"whatsapp://send?phone={phone}")
-    message_box = d(resourceId="com.whatsapp:id/entry")
-    if not message_box.click_exists(1):
-        return False
+    message_box = d(resourceId="com.whatsapp.w4b:id/entry")
+    if not message_box.click_exists(5):
+         return False
     message_box.clear_text()
-    message = split_message_with_delay(re.sub(r"\*name\*", name, message))
+    message = split_message_with_delay(re.sub(r"<name>", name, message))
     for p in message:
         list(send_char_typing_part(part, message_box, d) for part in p.parts)
         time.sleep(random.uniform(min(p.start_sleep, p.stop_sleep), max(p.start_sleep, p.stop_sleep)))
+    d(resourceId="com.whatsapp.w4b:id/conversation_entry_action_button").click()
     return True
