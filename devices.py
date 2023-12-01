@@ -1,4 +1,3 @@
-import logging
 import random
 import re
 import time
@@ -9,14 +8,9 @@ import uiautomator2 as u2
 from ppadb.client import Client as AdbClient
 from ppadb.device import Device as DeviceADB
 from uiautomator2 import UiObject
+from loguru import logger
 
-mylogs = logging.getLogger(__name__)
-mylogs.setLevel(logging.DEBUG)
 
-stream = logging.StreamHandler()
-stream.setLevel(logging.INFO)
-streamformat = logging.Formatter("%(asctime)s:%(levelname)s:%(message)s")
-stream.setFormatter(streamformat)
 
 TYPE_CHAR_DELAY_MS = 1
 
@@ -112,6 +106,9 @@ def send_message_to_phone(phone: str, name: str, message: str, device: DeviceADB
     message = split_message_with_delay(re.sub(r"<name>", name, message))
     for p in message:
         list(send_char_typing_part(part, message_box, d) for part in p.parts)
-        time.sleep(random.uniform(min(p.start_sleep, p.stop_sleep), max(p.start_sleep, p.stop_sleep)))
+        delay = random.uniform(min(p.start_sleep, p.stop_sleep), max(p.start_sleep, p.stop_sleep))
+        if delay != 0:
+            logger.info(f"задержка перед оправкой следующей части сообщения: {delay:0.2f} секунд")
+            time.sleep(delay)
     d(resourceId="com.whatsapp.w4b:id/conversation_entry_action_button").click()
     return "sent"
