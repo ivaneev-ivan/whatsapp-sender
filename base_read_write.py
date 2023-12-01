@@ -93,7 +93,7 @@ def base_read_write(*_, **kwargs):
             for row in ws.iter_rows():
                 phone2 = row[0].value
                 if len(row) == 3:
-                    if phone == phone2:
+                    if phone == phone2 and row[2].value is None:
                         row[2].value = status
                         wb.save(filename)
                         return "Успешно записано!"

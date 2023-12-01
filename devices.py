@@ -1,3 +1,4 @@
+import logging
 import random
 import re
 import time
@@ -8,6 +9,14 @@ import uiautomator2 as u2
 from ppadb.client import Client as AdbClient
 from ppadb.device import Device as DeviceADB
 from uiautomator2 import UiObject
+
+mylogs = logging.getLogger(__name__)
+mylogs.setLevel(logging.DEBUG)
+
+stream = logging.StreamHandler()
+stream.setLevel(logging.INFO)
+streamformat = logging.Formatter("%(asctime)s:%(levelname)s:%(message)s")
+stream.setFormatter(streamformat)
 
 TYPE_CHAR_DELAY_MS = 1
 
@@ -61,7 +70,15 @@ def split_message_with_delay(message: str) -> list[MessagePartWithDelay]:
     all_sleeps = re.findall(r"<\d+, \d+>", message)
     res = []
     for sleep in all_sleeps:
-        part, message = message.split(sleep)
+        parts = message.split(sleep)
+        if len(parts) == 2:
+            part, message = parts
+        else:
+            i = 0
+            if parts[0] == "":
+                i = 1
+            part = parts[i]
+            message = sleep.join(parts[i + 1:])
         start, stop = map(int, sleep.strip('<>').split(', '))
         res.append(MessagePartWithDelay(split_part_message_to_command(part), start, stop))
     res.append(MessagePartWithDelay(split_part_message_to_command(message), 0, 0))
@@ -74,7 +91,7 @@ def send_char_typing_part(message: MessagePartWithCommand, message_box: UiObject
         if text_before == "Сообщение":
             text_before = ""
         words = message.text.split()
-        for i in range(len(words)+1):
+        for i in range(len(words) + 1):
             message_box.send_keys(text_before + " ".join(words[:i]))
     if message.command == CommandTypes.SEND_MESSAGE:
         d(resourceId="com.whatsapp.w4b:id/conversation_entry_action_button").click()
@@ -82,16 +99,19 @@ def send_char_typing_part(message: MessagePartWithCommand, message_box: UiObject
         d.press('enter')
 
 
-def send_message_to_phone(phone: str, name: str, message: str, device: DeviceADB) -> bool:
+def send_message_to_phone(phone: str, name: str, message: str, device: DeviceADB) -> str:
     d = get_control_to_device(device)
     d.open_url(f"whatsapp://send?phone={phone}")
     message_box = d(resourceId="com.whatsapp.w4b:id/entry")
     if not message_box.click_exists(5):
-         return False
-    message_box.clear_text()
+        return "empty"
+    try:
+        message_box.clear_text()
+    except u2.UiObjectNotFoundError:
+        return "not sent"
     message = split_message_with_delay(re.sub(r"<name>", name, message))
     for p in message:
         list(send_char_typing_part(part, message_box, d) for part in p.parts)
         time.sleep(random.uniform(min(p.start_sleep, p.stop_sleep), max(p.start_sleep, p.stop_sleep)))
     d(resourceId="com.whatsapp.w4b:id/conversation_entry_action_button").click()
-    return True
+    return "sent"
