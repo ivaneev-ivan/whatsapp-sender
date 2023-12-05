@@ -7,6 +7,7 @@ from base_read_write import base_read_write
 from devices import get_all_devices, send_message_to_phone
 from text_randomaizer import randomize_message
 from utils import logger_print
+import phonenumbers
 
 
 def run_script(device: Device) -> None:
@@ -19,6 +20,11 @@ def run_script(device: Device) -> None:
         if phone == "EOF":
             logger_print("Телефоны закончились, прекращаю отправку")
             break
+        try:
+            phonenumbers.parse(phone, "RU")
+        except phonenumbers.phonenumberutil.NumberParseException:
+            logger_print("empty", "")
+            base_read_write(flag="write", phone_number=phone, status="empty")
         try:
             message = randomize_message("message-text.txt")  # выбираем сообщение для отправки
         except IndexError:
