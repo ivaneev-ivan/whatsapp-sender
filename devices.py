@@ -95,20 +95,19 @@ def send_char_typing_part(message: MessagePartWithCommand, message_box: UiObject
 
 def send_message_to_phone(phone: str, name: str, message: str, device: DeviceADB) -> str:
     d = get_control_to_device(device)
+    d.unlock()
     d.open_url(f"whatsapp://send?phone={phone}")
     message_box = d(resourceId="com.whatsapp.w4b:id/entry")
-    if not message_box.click_exists(5):
+    if not message_box.click_exists(10):
         return "empty"
     try:
         message_box.clear_text()
     except u2.UiObjectNotFoundError:
-        return "not sent"
+        return "empty"
     message = split_message_with_delay(re.sub(r"<name>", name, message))
     for p in message:
         list(send_char_typing_part(part, message_box, d) for part in p.parts)
         delay = random.uniform(min(p.start_sleep, p.stop_sleep), max(p.start_sleep, p.stop_sleep))
-        if delay != 0:
-            logger.info(f"задержка перед оправкой следующей части сообщения: {delay:0.2f} секунд")
-            time.sleep(delay)
+        time.sleep(delay)
     d(resourceId="com.whatsapp.w4b:id/conversation_entry_action_button").click()
     return "sent"
