@@ -82,7 +82,7 @@ def split_message_with_delay(message: str) -> list[MessagePartWithDelay]:
 def send_char_typing_part(message: MessagePartWithCommand, message_box: UiObject, d: u2.Device) -> str:
     if message.text != "":
         text_before = message_box.get_text()
-        if text_before == "Сообщение":
+        if text_before == "Сообщение" or text_before == "Message":
             text_before = ""
         words = message.text.split()
         for i in range(len(words) + 1):
@@ -95,7 +95,9 @@ def send_char_typing_part(message: MessagePartWithCommand, message_box: UiObject
 
 def send_message_to_phone(phone: str, name: str, message: str, device: DeviceADB) -> str:
     d = get_control_to_device(device)
+    d.logger.disabled = True
     d.unlock()
+    d.app_stop('com.whatsapp.w4b')
     d.open_url(f"whatsapp://send?phone={phone}")
     message_box = d(resourceId="com.whatsapp.w4b:id/entry")
     if not message_box.click_exists(10):
@@ -109,5 +111,7 @@ def send_message_to_phone(phone: str, name: str, message: str, device: DeviceADB
         list(send_char_typing_part(part, message_box, d) for part in p.parts)
         delay = random.uniform(min(p.start_sleep, p.stop_sleep), max(p.start_sleep, p.stop_sleep))
         time.sleep(delay)
-    d(resourceId="com.whatsapp.w4b:id/conversation_entry_action_button").click()
+    text_before = message_box.get_text()
+    if text_before != "Сообщение" and text_before != "Message":
+        d(resourceId="com.whatsapp.w4b:id/conversation_entry_action_button").click()
     return "sent"

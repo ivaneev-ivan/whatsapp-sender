@@ -1,16 +1,21 @@
+import configparser
 import os
+import random
 import time
-
+from tqdm import tqdm
+import phonenumbers
 from ppadb.device import Device
 
 from base_read_write import base_read_write
 from devices import get_all_devices, send_message_to_phone
 from text_randomaizer import randomize_message
 from utils import logger_print
-import phonenumbers
 
 
 def run_script(device: Device) -> None:
+    config = configparser.ConfigParser()
+    config.read('./config.cfg')
+    pauses = (int(config['global']['pauses_min']), int(config['global']['pauses_max']))
     if "com.github.uiautomator" in device.list_packages():
         logger_print("Удаляю приложение для управления телефоном перед запуском")
         device.uninstall("com.github.uiautomator")
@@ -20,22 +25,32 @@ def run_script(device: Device) -> None:
         if phone == "EOF":
             logger_print("Телефоны закончились, прекращаю отправку")
             break
+        logger_print(f"Начинаю отправку по номеру {phone}", "")
         try:
-            phonenumbers.parse(phone, "RU")
+            phonenum = phonenumbers.parse(phone, "RU")
+            if len(str(phonenum.national_number)) > 10:
+                logger_print("empty")
+                base_read_write(flag="write", phone_number=phone, status="empty")
+                continue
         except phonenumbers.phonenumberutil.NumberParseException:
-            logger_print("empty", "")
+            logger_print("empty")
             base_read_write(flag="write", phone_number=phone, status="empty")
+            continue
         try:
             message = randomize_message("message-text.txt")  # выбираем сообщение для отправки
         except IndexError:
             logger_print("Не получилось найти сообщения для рассылки на текущее время")
             time.sleep(60)
             continue
-        logger_print(f"Начинаю отправку по номеру {phone}")
         status = send_message_to_phone(phone, name, message, device)
-        logger_print(status, '')
+        logger_print(status)
         base_read_write(flag="write", phone_number=phone, status=status)
-
+        delay = random.randint(min(pauses), max(pauses))
+        logger_print("Задержка перед отправкой следующего сообщения: ", "")
+        for i in range(delay, 0, -1):
+            print(f"{i}", end=" ")
+            time.sleep(1)
+        print()
 
 def main():
     while True:
