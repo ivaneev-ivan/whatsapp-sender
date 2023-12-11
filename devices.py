@@ -106,7 +106,7 @@ def send_message_to_phone(phone: str, name: str, message: str, device: DeviceADB
         message_box.clear_text()
     except u2.UiObjectNotFoundError:
         return "empty"
-    message = split_message_with_delay(re.sub(r"<name>", name, message))
+    message = split_message_with_delay(message)
     for p in message:
         list(send_char_typing_part(part, message_box, d) for part in p.parts)
         delay = random.uniform(min(p.start_sleep, p.stop_sleep), max(p.start_sleep, p.stop_sleep))

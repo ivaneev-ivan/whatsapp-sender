@@ -1,8 +1,9 @@
 import configparser
 import os
 import random
+import re
 import time
-from tqdm import tqdm
+
 import phonenumbers
 from ppadb.device import Device
 
@@ -25,7 +26,7 @@ def run_script(device: Device) -> None:
         if phone == "EOF":
             logger_print("Телефоны закончились, прекращаю отправку")
             break
-        logger_print(f"Начинаю отправку по номеру {phone}", "")
+        logger_print(f"Начинаю отправку по номеру {phone} {name}", "")
         try:
             phonenum = phonenumbers.parse(phone, "RU")
             if len(str(phonenum.national_number)) > 10:
@@ -37,7 +38,8 @@ def run_script(device: Device) -> None:
             base_read_write(flag="write", phone_number=phone, status="empty")
             continue
         try:
-            message = randomize_message("message-text.txt")  # выбираем сообщение для отправки
+            message = re.sub(r"<name>", name, randomize_message("message-text.txt"))  # выбираем сообщение для отправки
+            logger_print(message, '', True)
         except IndexError:
             logger_print("Не получилось найти сообщения для рассылки на текущее время")
             time.sleep(60)
@@ -46,11 +48,11 @@ def run_script(device: Device) -> None:
         logger_print(status)
         base_read_write(flag="write", phone_number=phone, status=status)
         delay = random.randint(min(pauses), max(pauses))
-        logger_print("Задержка перед отправкой следующего сообщения: ", "")
         for i in range(delay, 0, -1):
-            print(f"{i}", end=" ")
+            print(f"\rЗадержка перед отправкой следующего сообщения: {i}", end='')
             time.sleep(1)
         print()
+
 
 def main():
     while True:
