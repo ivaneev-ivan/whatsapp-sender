@@ -41,7 +41,10 @@ def run_script(device: Device) -> None:
             message = re.sub(r"<name>", name, randomize_message("message-text.txt"))  # выбираем сообщение для отправки
             logger_print(message, '', True)
         except IndexError:
-            logger_print("Не получилось найти сообщения для рассылки на текущее время")
+            logger_print("\nНе получилось найти сообщения для рассылки на текущее время")
+            with open("message-text.txt", "r", encoding="utf-8") as file:
+                d = file.read()
+            logger_print(d)
             time.sleep(60)
             continue
         status = send_message_to_phone(phone, name, message, device)
@@ -69,6 +72,7 @@ def main():
         else:
             logger_print("Телефон не обнаружен. Повтор обнаружения через 15 секунд")
         time.sleep(15)
+    input("Нажмите на любую кнопку и консоль закроется")
 
 
 if __name__ == '__main__':
