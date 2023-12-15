@@ -5,6 +5,8 @@ import re
 import time
 
 import phonenumbers
+from phonenumbers import carrier
+from phonenumbers.phonenumberutil import number_type
 from ppadb.device import Device
 
 from base_read_write import base_read_write
@@ -21,19 +23,14 @@ def run_script(device: Device) -> None:
         logger_print("Удаляю приложение для управления телефоном перед запуском")
         device.uninstall("com.github.uiautomator")
     is_doing = True
+    print_message_file = False
     while is_doing:
         phone, name = base_read_write(flag="read")
         if phone == "EOF":
             logger_print("Телефоны закончились, прекращаю отправку")
             break
         logger_print(f"Начинаю отправку по номеру {phone} {name}", "")
-        try:
-            phonenum = phonenumbers.parse(phone, "RU")
-            if len(str(phonenum.national_number)) > 10:
-                logger_print("empty")
-                base_read_write(flag="write", phone_number=phone, status="empty")
-                continue
-        except phonenumbers.phonenumberutil.NumberParseException:
+        if not carrier._is_mobile(number_type(phonenumbers.parse(phone, "RU"))):
             logger_print("empty")
             base_read_write(flag="write", phone_number=phone, status="empty")
             continue
@@ -41,12 +38,15 @@ def run_script(device: Device) -> None:
             message = re.sub(r"<name>", name, randomize_message("message-text.txt"))  # выбираем сообщение для отправки
             logger_print(message, '', True)
         except IndexError:
-            logger_print("\nНе получилось найти сообщения для рассылки на текущее время")
-            with open("message-text.txt", "r", encoding="utf-8") as file:
-                d = file.read()
-            logger_print(d)
+            logger_print("Не получилось найти сообщения для рассылки на текущее время", "\n", True)
+            if not print_message_file:
+                with open("message-text.txt", "r", encoding="utf-8") as file:
+                    d = file.read()
+                logger_print(d)
+            print_message_file = True
             time.sleep(60)
             continue
+        print_message_file = False
         status = send_message_to_phone(phone, name, message, device)
         logger_print(status)
         base_read_write(flag="write", phone_number=phone, status=status)
