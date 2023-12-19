@@ -8,9 +8,6 @@ import uiautomator2 as u2
 from ppadb.client import Client as AdbClient
 from ppadb.device import Device as DeviceADB
 from uiautomator2 import UiObject
-from loguru import logger
-
-
 
 TYPE_CHAR_DELAY_MS = 1
 

@@ -17,7 +17,7 @@ from utils import logger_print
 
 def run_script(device: Device) -> None:
     config = configparser.ConfigParser()
-    config.read('./config.cfg')
+    config.read(os.path.join(os.getcwd(), 'config.cfg'))
     pauses = (int(config['global']['pauses_min']), int(config['global']['pauses_max']))
     if "com.github.uiautomator" in device.list_packages():
         logger_print("Удаляю приложение для управления телефоном перед запуском")
@@ -67,7 +67,7 @@ def main():
                 break
         except RuntimeError:
             logger_print("ADB не включен. Попробую включить командой adb devices")
-            os.system('adb devices')
+            os.system('./adb-cmd/adb.exe devices')
             continue
         else:
             logger_print("Телефон не обнаружен. Повтор обнаружения через 15 секунд")
