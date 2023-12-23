@@ -92,7 +92,7 @@ def send_char_typing_part(message: MessagePartWithCommand, message_box: UiObject
 
 def send_message_to_phone(phone: str, name: str, message: str, device: DeviceADB) -> str:
     d = get_control_to_device(device)
-    d.logger.disabled = True
+    d.logger.disabled = False
     d.unlock()
     d.app_stop('com.whatsapp.w4b')
     d.open_url(f"whatsapp://send?phone={phone}")

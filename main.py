@@ -1,5 +1,6 @@
 import configparser
 import os
+import platform
 import random
 import re
 import time
@@ -17,11 +18,16 @@ from utils import logger_print
 
 def run_script(device: Device) -> None:
     config = configparser.ConfigParser()
-    config.read(os.path.join(os.getcwd(), 'config.cfg'))
+    config_path = os.path.join(os.getcwd(), 'config.cfg')
+    message_path = os.path.join(os.getcwd(), 'message-text.txt')
+    if not os.path.exists(config_path):
+        print("config.cfg не найден. Создайте или переместите его в директорию с файлом и перезапустите скрипт")
+        return
+    if not os.path.exists(message_path):
+        print("message-text.txt не найден. Создайте или переместите его в директорию с файлом и перезапустите скрипт")
+        return
+    config.read(config_path)
     pauses = (int(config['global']['pauses_min']), int(config['global']['pauses_max']))
-    if "com.github.uiautomator" in device.list_packages():
-        logger_print("Удаляю приложение для управления телефоном перед запуском")
-        device.uninstall("com.github.uiautomator")
     is_doing = True
     print_message_file = False
     while is_doing:
@@ -67,7 +73,10 @@ def main():
                 break
         except RuntimeError:
             logger_print("ADB не включен. Попробую включить командой adb devices")
-            os.system('./adb-cmd/adb.exe devices')
+            if platform.system() == 'Windows':
+                os.system('./adb-cmd/adb.exe devices')
+            else:
+                os.system('adb devices')
             continue
         else:
             logger_print("Телефон не обнаружен. Повтор обнаружения через 15 секунд")
