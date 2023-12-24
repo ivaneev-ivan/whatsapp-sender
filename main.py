@@ -74,7 +74,7 @@ def main():
         except RuntimeError:
             logger_print("ADB не включен. Попробую включить командой adb devices")
             if platform.system() == 'Windows':
-                os.system('./adb-cmd/adb.exe devices')
+                os.system('adb-cmd/adb.exe devices')
             else:
                 os.system('adb devices')
             continue

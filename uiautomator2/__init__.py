@@ -26,12 +26,10 @@ import os
 import re
 import shutil
 import subprocess
-import sys
-import threading
 import time
 import warnings
 import xml.dom.minidom
-from collections import defaultdict, namedtuple
+from collections import namedtuple
 from datetime import datetime
 from pathlib import Path
 from typing import List, Optional, Tuple, Union
@@ -44,12 +42,11 @@ import packaging
 import requests
 import six
 import six.moves.urllib.parse as urlparse
+from PIL import Image
 from cached_property import cached_property
 from deprecated import deprecated
 from logzero import setup_logger
-from PIL import Image
 from retry import retry
-from urllib3.util.retry import Retry
 
 from . import xpath
 from ._proto import HTTP_TIMEOUT, SCROLL_STEPS, Direction
@@ -73,7 +70,6 @@ if six.PY2:
 DEBUG = False
 WAIT_FOR_DEVICE_TIMEOUT = int(os.getenv("WAIT_FOR_DEVICE_TIMEOUT", 20))
 
-
 log_format = '%(color)s[%(levelname)1.1s %(asctime)s %(module)s:%(lineno)d]%(end_color)s [pid:%(process)d] %(message)s'
 formatter = logzero.LogFormatter(fmt=log_format)
 logger = setup_logger("uiautomator2", level=logging.DEBUG, formatter=formatter)
@@ -82,6 +78,7 @@ _mswindows = (os.name == "nt")
 
 class AppInstaller(abc.ABC):
     """ 解决手机安装apk弹窗问题 """
+
     @abc.abstractmethod
     def install(self, url: str):
         """ install app to device """
@@ -210,7 +207,6 @@ class _AgentRequestSession(TimeoutRequestsSession):
                     self.__client._is_agent_alive():
                 raise
 
-
         if not self.__client._serial:
             raise OSError(
                 "http-request to atx-agent error, can only recover from USB")
@@ -257,8 +253,9 @@ class _BaseClient(object):
         log_format = f'%(color)s[%(levelname)1.1s %(asctime)s %(module)s:%(lineno)d]%(end_color)s [pid:%(process)d] [{self._serial}] %(message)s'
         formatter = logzero.LogFormatter(fmt=log_format)
         self._logger = setup_logger(name="uiautomator2.client", level=logging.DEBUG, formatter=formatter)
-        
-        filelock_path = os.path.expanduser("~/.uiautomator2/filelocks/") + base64.urlsafe_b64encode(self._serial.encode('utf-8')).decode('utf-8') + ".lock"
+
+        filelock_path = os.path.expanduser("~/.uiautomator2/filelocks/") + base64.urlsafe_b64encode(
+            self._serial.encode('utf-8')).decode('utf-8') + ".lock"
         os.makedirs(os.path.dirname(filelock_path), exist_ok=True)
         self._filelock = filelock.FileLock(filelock_path, timeout=200)
 
@@ -367,7 +364,7 @@ class _BaseClient(object):
                 adb.wait_for(self._serial, timeout=1)
             except adbutils.AdbTimeout:
                 continue
-            
+
             return adb.device(self._serial)
         return None
 
@@ -378,15 +375,9 @@ class _BaseClient(object):
     def _setup_uiautomator(self):
         self.shell(["pm", "uninstall", "com.github.uiautomator"])
         self.shell(["pm", "uninstall", "com.github.uiautomator.test"])
-
-        assets_dir = Path(__file__).absolute().parent.joinpath("assets")
-        cwd_assets_dir = Path(os.getcwd()).absolute().joinpath("assets")
-
+        assets_dir = "uiautomator2/assets/"
         for name in ("app-uiautomator.apk", "app-uiautomator-test.apk"):
-            apk_path = assets_dir.joinpath(name).as_posix()
-            cwd_apk_path = cwd_assets_dir.joinpath(name).as_posix()
-            if not os.path.exists(apk_path) and os.path.exists(cwd_apk_path):
-                apk_path = cwd_apk_path
+            apk_path = assets_dir + name
             target_path = "/data/local/tmp/" + name
             self.logger.debug("Install %s", name)
             self.push(apk_path, target_path)
@@ -429,7 +420,7 @@ class _BaseClient(object):
                                  stream=True)
             # return self._request("get", "/shell/stream", params={"command": cmdline}, timeout=None, stream=True) # yapf: disable
         data = dict(command=cmdline, timeout=str(timeout))
-        ret = self.http.post("/shell", data=data, timeout=timeout+10)
+        ret = self.http.post("/shell", data=data, timeout=timeout + 10)
         if ret.status_code != 200:
             raise RuntimeError(
                 "device agent responds with an error code %d" %
@@ -518,7 +509,7 @@ class _BaseClient(object):
         if res.status_code == 502:
             raise GatewayError(
                 res, "gateway error, time used %.1fs" %
-                (time.time() - request_start))
+                     (time.time() - request_start))
         if res.status_code == 410:  # http status gone: session broken
             raise SessionBrokenError("app quit or crash", res.text)
         if res.status_code != 200:
@@ -575,7 +566,7 @@ class _BaseClient(object):
             return r.text.strip()
         except requests.RequestException as e:
             return None
-    
+
     def _is_agent_outdated(self) -> bool:
         version = self._get_agent_version()
         if version != __atx_agent_version__:
@@ -634,7 +625,7 @@ class _BaseClient(object):
 
             # atx-agent might be outdated, check atx-agent version here
             if self._is_agent_outdated():
-                if self._serial: # update atx-agent will not work on WiFi
+                if self._serial:  # update atx-agent will not work on WiFi
                     self._prepare_atx_agent()
 
             ok = self._force_reset_uiautomator_v2(
@@ -649,7 +640,7 @@ class _BaseClient(object):
                 reason = "signature not match, reinstall uiautomator apks"
 
         return self.reset_uiautomator(reason=reason,
-                                    depth=depth + 1)
+                                      depth=depth + 1)
 
     def _force_reset_uiautomator_v2(self, launch_test_app=False):
         brand = self.shell("getprop ro.product.brand").output.strip()
@@ -667,11 +658,11 @@ class _BaseClient(object):
         if self._is_apk_required():
             self._setup_uiautomator()
 
-        if launch_test_app:
-            self._grant_app_permissions()
-            self.shell(['am', 'start', '-a', 'android.intent.action.MAIN', '-c',
-                        'android.intent.category.LAUNCHER', '-n', package_name + "/" + ".ToastActivity"])
-            
+        # if launch_test_app:
+        #     self._grant_app_permissions()
+        #     self.shell(['am', 'start', '-a', 'android.intent.action.MAIN', '-c',
+        #                 'android.intent.category.LAUNCHER', '-n', package_name + "/" + ".ToastActivity"])
+
         self.uiautomator.start()
 
         # wait until uiautomator2 service is working
@@ -680,7 +671,7 @@ class _BaseClient(object):
         flow_window_showed = False
         while time.time() < deadline:
             self.logger.debug("uiautomator-v2 is starting ... left: %.1fs",
-                         deadline - time.time())
+                              deadline - time.time())
 
             if not self.uiautomator.running():
                 break
@@ -708,7 +699,11 @@ class _BaseClient(object):
             return True
 
         # 检查测试apk是否存在
-        if self._package_version("com.github.uiautomator.test") is None:
+        try:
+            test = self._package_version("com.github.uiautomator.test")
+            if test is None:
+                return True
+        except:
             return True
         return False
 
@@ -737,9 +732,9 @@ class _BaseClient(object):
     def _grant_app_permissions(self):
         self.logger.debug("grant permissions")
         for permission in [
-                "android.permission.SYSTEM_ALERT_WINDOW",
-                "android.permission.ACCESS_FINE_LOCATION",
-                "android.permission.READ_PHONE_STATE",
+            "android.permission.SYSTEM_ALERT_WINDOW",
+            "android.permission.ACCESS_FINE_LOCATION",
+            "android.permission.READ_PHONE_STATE",
         ]:
             self.shell(['pm', 'grant', "com.github.uiautomator", permission])
 
@@ -1354,7 +1349,8 @@ class _AppMixIn:
         # https://stackoverflow.com/questions/13193592/adb-android-getting-the-name-of-the-current-activity
         package = None
         output, _ = self.shell(['dumpsys', 'activity', 'activities'])
-        _recordRE = re.compile(r'mResumedActivity: ActivityRecord\{.*?\s+(?P<package>[^\s]+)/(?P<activity>[^\s]+)\s.*?\}')
+        _recordRE = re.compile(
+            r'mResumedActivity: ActivityRecord\{.*?\s+(?P<package>[^\s]+)/(?P<activity>[^\s]+)\s.*?\}')
         m = _recordRE.search(output)
         if m:
             package = m.group("package")
@@ -1372,7 +1368,7 @@ class _AppMixIn:
                        pid=int(m.group('pid')))
             if ret['package'] == package:
                 return ret
-                
+
         if ret:  # get last result
             return ret
         raise OSError("Couldn't get focused app")
@@ -1388,7 +1384,7 @@ class _AppMixIn:
         target = "/data/local/tmp/_tmp.apk"
         self.push(data, target, show_progress=True)
         logger.debug("pm install -r -t %s", target)
-        ret = self.shell(['pm', 'install', "-r", "-t", target],timeout=300)
+        ret = self.shell(['pm', 'install', "-r", "-t", target], timeout=300)
         if ret.exit_code != 0:
             raise RuntimeError(ret.output, ret.exit_code)
 
@@ -1409,7 +1405,8 @@ class _AppMixIn:
             time.sleep(.5)
         return False
 
-    def app_start(self, package_name: str, activity: Optional[str] = None, wait: bool = False, stop: bool = False, use_monkey: bool = False):
+    def app_start(self, package_name: str, activity: Optional[str] = None, wait: bool = False, stop: bool = False,
+                  use_monkey: bool = False):
         """ Launch application
         Args:
             package_name (str): package name
